@@ -1,0 +1,11 @@
+{
+  "name": "add-watermark",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Marcin Stalmach <marcin.stalmach123@outlook.com>",
+  "license": "MIT",
+  "dependencies": {
+    "inquirer": "6.5.0",
+    "jimp": "0.6.4"
+  }
+}
