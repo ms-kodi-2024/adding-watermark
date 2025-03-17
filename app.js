@@ -1,16 +1,17 @@
 const Jimp = require('jimp');
 const inquirer = require('inquirer');
 const fs = require('fs');
+const { type } = require('os');
 
 const addTextWatermarkToImage = async function (inputFile, outputFile, text) {
 	try {
 		const image = await Jimp.read(inputFile);
 		const font = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK);
 		const textData = {
-		text,
-		alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
-		alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE,
-	};
+			text,
+			alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
+			alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE,
+		};
 		image.print(font, 0, 0, textData, image.getWidth(), image.getHeight());
 		await image.quality(100).writeAsync(outputFile);
 		console.log('Success!');
@@ -38,6 +39,14 @@ const addImageWatermarkToImage = async function (inputFile, outputFile, watermar
 	catch(error) {}
 };
 
+const applyEffects = async (image, effects) => {
+  if (effects.includes('brightness')) image.brightness(0.2);
+  if (effects.includes('contrast')) image.contrast(0.3);
+  if (effects.includes('greyscale')) image.greyscale();
+  if (effects.includes('invert')) image.invert();
+  return image;
+};
+
 const prepareOutputFilename = function (fileName) {
 	const fileNamesElements = fileName.split('.');
 	return `${fileNamesElements[0]}-with-watermark.${fileNamesElements[1]}`;
@@ -58,11 +67,30 @@ const startApp = async () => {
     type: 'input',
     message: 'What file do you want to mark?',
     default: 'test.jpg',
-  }, {
+	}, {
+		name: 'editAnswer',
+		message: 'Would you like to edit the graphic further?',
+		type: 'confirm',
+	}, {
     name: 'watermarkType',
     type: 'list',
     choices: ['Text watermark', 'Image watermark'],
 		}]);
+	
+	if (options.editAnswer) {
+		const editChoices = await inquirer.prompt([{
+			name: 'selectedOptions',
+			type: 'checkbox',
+			message: 'Select your options:',
+			choices: [
+				'Option 1',
+				'Option 2',
+				'Option 3',
+				'Option 4'
+			]
+		}]);
+		options.selectedOptions = editChoices.selectedOptions;
+	}
 	
 	if(options.watermarkType === 'Text watermark') {
 		const text = await inquirer.prompt([{
@@ -71,12 +99,10 @@ const startApp = async () => {
 			message: 'Type your watermark text:',
 		}]);
 		options.watermarkText = text.value;
-
+	
 		if (fs.existsSync('./img/' + options.inputImage)) {
 			addTextWatermarkToImage('./img/' + options.inputImage, './' + prepareOutputFilename(options.inputImage), options.watermarkText)
-		} else {
-			console.log('Something went wrong... Try again');
-		}
+		} else console.log('Something went wrong... Try again');
 	} else {
 		const image = await inquirer.prompt([{
 			name: 'filename',
@@ -86,10 +112,11 @@ const startApp = async () => {
 		}]);
 		options.watermarkImage = image.filename;
 
-		if (fs.existsSync('./img/' + options.inputImage) && fs.existsSync('./img/' + options.watermarkImage))
+		if (fs.existsSync('./img/' + options.inputImage) && fs.existsSync('./img/' + options.watermarkImage)) {
 			addImageWatermarkToImage('./img/' + options.inputImage, './' + prepareOutputFilename(options.inputImage), './img/' + options.watermarkImage);
-		else console.log('Something went wrong... Try again');
+		} else console.log('Something went wrong... Try again');
 	}
+
 }
 
 startApp();
