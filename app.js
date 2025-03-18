@@ -1,7 +1,6 @@
 const Jimp = require('jimp');
 const inquirer = require('inquirer');
 const fs = require('fs');
-const { type } = require('os');
 
 const addTextWatermarkToImage = async function (inputFile, outputFile, text) {
 	try {
@@ -15,7 +14,6 @@ const addTextWatermarkToImage = async function (inputFile, outputFile, text) {
 		image.print(font, 0, 0, textData, image.getWidth(), image.getHeight());
 		await image.quality(100).writeAsync(outputFile);
 		console.log('Success!');
-		startApp();
 	}
 	catch(error){}
 };
@@ -34,9 +32,8 @@ const addImageWatermarkToImage = async function (inputFile, outputFile, watermar
 		
 		await image.quality(100).writeAsync(outputFile);
 		console.log('Success!');
-		startApp();
 	}
-	catch(error) {}
+	catch(error){}
 };
 
 const applyEffects = async (image, effects) => {
@@ -83,10 +80,10 @@ const startApp = async () => {
 			type: 'checkbox',
 			message: 'Select your options:',
 			choices: [
-				'Option 1',
-				'Option 2',
-				'Option 3',
-				'Option 4'
+				'brightness',
+				'contrast',
+				'greyscale',
+				'invert'
 			]
 		}]);
 		options.selectedOptions = editChoices.selectedOptions;
@@ -101,22 +98,43 @@ const startApp = async () => {
 		options.watermarkText = text.value;
 	
 		if (fs.existsSync('./img/' + options.inputImage)) {
-			addTextWatermarkToImage('./img/' + options.inputImage, './' + prepareOutputFilename(options.inputImage), options.watermarkText)
-		} else console.log('Something went wrong... Try again');
+			await addTextWatermarkToImage('./img/' + options.inputImage, './' + prepareOutputFilename(options.inputImage), options.watermarkText);
+			
+			if(options.editAnswer && options.selectedOptions) {
+				const outputFile = './' + prepareOutputFilename(options.inputImage);
+				let image = await Jimp.read(outputFile);
+				image = await applyEffects(image, options.selectedOptions);
+				await image.quality(100).writeAsync(outputFile);
+				console.log('Additional effects applied successfully!');
+			}
+		} else {
+      console.log('Something went wrong... Try again');
+    }
 	} else {
-		const image = await inquirer.prompt([{
+		const imagePrompt = await inquirer.prompt([{
 			name: 'filename',
 			type: 'input',
 			message: 'Type your watermark name:',
 			default: 'logo.png',
 		}]);
-		options.watermarkImage = image.filename;
+		options.watermarkImage = imagePrompt.filename;
 
 		if (fs.existsSync('./img/' + options.inputImage) && fs.existsSync('./img/' + options.watermarkImage)) {
-			addImageWatermarkToImage('./img/' + options.inputImage, './' + prepareOutputFilename(options.inputImage), './img/' + options.watermarkImage);
-		} else console.log('Something went wrong... Try again');
+			await addImageWatermarkToImage('./img/' + options.inputImage, './' + prepareOutputFilename(options.inputImage), './img/' + options.watermarkImage);
+			
+			if(options.editAnswer && options.selectedOptions) {
+				const outputFile = './' + prepareOutputFilename(options.inputImage);
+				let image = await Jimp.read(outputFile);
+				image = await applyEffects(image, options.selectedOptions);
+				await image.quality(100).writeAsync(outputFile);
+				console.log('Additional effects applied successfully!');
+			}
+		} else {
+      console.log('Something went wrong... Try again');
+    }
 	}
 
+  startApp();
 }
 
 startApp();
